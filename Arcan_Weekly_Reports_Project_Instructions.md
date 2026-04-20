@@ -197,8 +197,8 @@ GitHub repository: `shivaanik123/arcan-reports-api` (data/ folder)
 **Income vs Budget (cols S-U, rows 3-70):**
 - S: Date, T: Actual income, U: Budget income
 
-**Expense vs Budget (cols W-Y, rows 3-70):**
-- W: Date, X: Actual expense, Y: Budget expense
+**Expense vs Budget (cols W-X, rows 3-70):**
+- W: Actual expense, X: Budget expense (uses the same S date column as Income)
 
 **Cash Balance (cols Z-AB, rows 3-60):**
 - Z: Date, AA: Actual (Book Balance), AB: Adjusted (Available Balance)
@@ -212,11 +212,11 @@ GitHub repository: `shivaanik123/arcan-reports-api` (data/ folder)
 - AI: Unit type code, AJ: Type name, AK: # Units, AL: # Occupied, AM: Sq ft, AN: Market rent, AO: In-place rent
 - Grouped by unit type from Unit Availability Details
 
-**Historical Rents (cols AQ-AS, rows 3-15):**
-- AQ: Date, AR: Market rent avg, AS: In-place rent avg
+**Historical Rents (cols AP-AR, rows 3-15):**
+- AP: Date, AQ: Market rent avg, AR: In-place rent avg
 
-**Arcan Internal (cols AU-AW, rows 2+):**
-- AU: Date, AV: Work orders, AW: Make readies
+**Arcan Internal (cols AT-AV, rows 3+):**
+- AT: Date, AU: Work orders, AV: Make readies
 
 ---
 
@@ -247,6 +247,7 @@ All scripts live in `/home/claude/` during execution:
 | Script | Purpose |
 |---|---|
 | `github_db.py` | Database layer — pull/push CSV data from GitHub repo |
+| `parse_long_report.py` | Parses the INPUT sheet of a long template weekly report and returns historical occupancy + financial rows. Used for both backfill and Monday incremental updates. |
 | `generate_short_report.py` | Short template generator — parses Yardi files, fills template, writes back to DB |
 | `generate_long_report.py` | Long template generator — same for long template, includes cash report integration |
 | `orchestrator.py` | Main entry point — unzips bulk download, sorts by property, routes to correct generator, saves DB |
@@ -306,29 +307,41 @@ Reports are stored in: `05 Reporting → 07 Arcan Client Reports → Weekly Repo
 
 ## Backfill Status
 
-| Property | Occupancy | Financial | Collections | Cash | Income/Expense | Work Orders |
-|---|---|---|---|---|---|---|
-| 55 Pharr | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Capella | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Emerson 1600 | ✅ | — | ✅ | — | — | — |
-| Marsh Point | ✅ | — | ✅ | — | — | — |
-| Perry Heights | ✅ (in DB) | ✅ | ✅ (partial) | — | — | ✅ (in DB) |
-| Kensington Place | ✅ (in DB) | — | — | — | — | — |
-| Longview | ✅ (in DB) | — | — | — | — | — |
-| Abbey Lake | ✅ (partial) | — | — | — | — | — |
-| Georgetown | ✅ (in DB) | ✅ (partial) | — | — | — | — |
-| Portico | ✅ (partial) | ✅ (partial) | — | — | — | — |
-| The Turn | ✅ (partial) | ✅ (partial) | — | — | — | — |
-| Woodland Commons | ✅ (partial) | ✅ (partial) | — | — | — | — |
-| Marbella | — | — | — | — | — | — |
-| Manchester | — | — | — | — | — | — |
-| Tapestry Park | — | — | — | — | — | — |
-| Haven | — | — | — | — | — | — |
-| Hamptons | — | — | — | — | — | — |
-| Tall Oaks | — | — | — | — | — | — |
-| Colony Woods | — | — | — | — | — | — |
+All 19 properties backfilled as of April 2026. The DB holds 2,651 occupancy rows and 1,018 financial rows across the full portfolio.
 
-**Backfill method:** Read the latest weekly report xlsx from Box (get_file_content), parse the INPUT/Financial sheet data, save to GitHub database via github_db.py.
+### Short Template (all 9 complete)
+
+| Property | Occupancy | Financial | Notes |
+|---|---|---|---|
+| 55 Pharr | ✅ | ✅ | full |
+| Perry Heights | ✅ | ✅ | full (63 financial records back to Jan 2021) |
+| Kensington Place | ✅ | ✅ | full (63 financial records, 36 months collections) |
+| Longview | ✅ | ✅ | full (63 financial records, 33 months collections) |
+| Abbey Lake | ✅ | ✅ | full |
+| Georgetown | ✅ | ✅ | full |
+| Portico | ✅ | ✅ | full |
+| The Turn | ✅ | ✅ | ~48 weeks occupancy (newer acquisition — as complete as available) |
+| Woodland Commons | ✅ | ✅ | ~48 weeks occupancy (newer acquisition — as complete as available) |
+| Marbella | ✅ | ✅ | 114 weeks occupancy from Jan 2024 + 27 months financial |
+
+### Long Template (all 10 complete)
+
+| Property | Occupancy | Financial | Notes |
+|---|---|---|---|
+| 55 Pharr | ✅ | ✅ | full (work orders included) |
+| Capella | ✅ | ✅ | work orders not yet backfilled |
+| Emerson 1600 | ✅ | ✅ | full (income/expense + cash filled via parser) |
+| Marsh Point | ✅ | ✅ | full (income/expense + cash filled via parser) |
+| Manchester at Wesleyan | ✅ | ✅ | 162 occ rows + 59 financial rows from INPUT parse |
+| Tapestry Park | ✅ | ✅ | 114 occ rows + 42 financial rows |
+| Haven | ✅ | ✅ | 208 occ rows + 78 financial rows |
+| Hamptons at East Cobb | ✅ | ✅ | 65 occ rows + 24 financial rows |
+| Tall Oaks | ✅ | ✅ | 66 occ rows + 25 financial rows |
+| Colony Woods | ✅ | ✅ | 122 occ rows + 72 financial rows |
+
+**Backfill method (current):** Run `parse_long_report.py` against the latest weekly report xlsx for each long template property. The parser extracts every historical range on the INPUT sheet (occupancy M-N, turnover P-Q, income/expense S-X, cash Z-AB, collections AD-AG, historical rents AP-AR, work orders AT-AV) and upserts into the CSV database keyed on (property_code, date). Short template properties were backfilled earlier from their Financial sheet historical columns.
+
+**For future updates:** the same parser is the core of the Monday run — it can process either a full weekly report (backfill) or the current week's output (incremental update), using the same upsert logic.
 
 ---
 
