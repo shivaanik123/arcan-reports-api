@@ -31,3 +31,4 @@ id,property_code,week_date,occupancy_pct,leased_pct,units,occupied,vacant,notice
 ,portico,2026-04-27,,,,,,,,,0,2,,14,13,1,0,1,,,,,,,,
 ,georget,2026-04-27,,,,,,,,,1,0,,6,4,2,0,1,,,,,,,,
 ,longvw,2026-04-27,,,,,,,,,1,0,,12,3,8,0,0,,,,,,,,
+,kenplc,2026-04-27,,,,,,,,,0,1,,14,4,10,1,0,,,,,,,,
